@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Water Secure (Demo)</title>
+  <!-- Tailwind for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for interactive analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --blush: #f7e6ef;
+      --rose: #e98bb9;
+      --lavender: #c7b8ea;
+      --mint: #a7e0d3;
+      --deep: #3b3b5a;
+      --bg: #fcfcfe;
+      --card: #ffffff;
+    }
+    body { background: linear-gradient(180deg, var(--bg), #ffffff 45%, var(--bg) 100%); }
+    .soft-card {
+      background: var(--card);
+      border: 1px solid rgba(31,41,55,0.06);
+      box-shadow: 0 8px 24px rgba(31,41,55,0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .soft-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(31,41,55,0.08); }
+    .pulse { position: relative; }
+    .pulse::after {
+      content: "";
+      position: absolute; inset: -6px;
+      border-radius: 9999px; border: 2px solid rgba(80,200,180,0.35);
+      animation: ring 1.6s infinite;
+    }
+    @keyframes ring { 0% {transform:scale(0.8);opacity:.8} 100% {transform:scale(1.4);opacity:0} }
+    .pill { border-radius: 9999px; padding: 0.25rem 0.625rem; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.02em; }
+    .pill-good { background: rgba(167,224,211,0.2); color: #0f766e; border: 1px solid rgba(167,224,211,0.6); }
+    .pill-warn { background: rgba(255,214,165,0.25); color: #92400e; border: 1px solid rgba(255,214,165,0.6); }
+    .pill-crit { background: rgba(254,178,178,0.25); color: #991b1b; border: 1px solid rgba(254,178,178,0.6); }
+    .chip { background: rgba(31,41,55,0.06); border: 1px solid rgba(31,41,55,0.12); }
+    .progress-track { background: linear-gradient(90deg, rgba(199,184,234,0.25), rgba(231,161,180,0.2)); }
+    .progress-fill { background: linear-gradient(90deg, var(--lavender), var(--rose)); }
+    .btn-primary { background: var(--lavender); color: white; }
+    .btn-primary:hover { opacity: .9; }
+    .link-tab { color: #374151; }
+    .link-tab.active { background: #fff; border-color: rgba(31,41,55,0.1); }
+    .toast { animation: slideIn 260ms ease; }
+    @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    a.navlink { border: 1px solid rgba(31,41,55,0.08); }
+  </style>
+</head>
+<body class="min-h-screen text-[15px] text-gray-800">
+  <div id="app" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-full bg-[var(--blush)] grid place-items-center border border-rose-200">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 text-rose-500">
+            <path fill="currentColor" d="M12 2.69c.4.45 4.92 5.6 6.27 8.6 1.27 2.82-.05 6.14-2.87 7.41-2.82 1.27-6.14-.05-7.41-2.87C6.39 12.82 11.6 3.14 12 2.69Z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight text-[var(--deep)]">Water Secure</h1>
+          <p class="text-sm text-gray-500">(Demo)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 pulse"></span>
+          <span class="text-sm text-gray-600">Connected to simulated devices</span>
+        </div>
+        <div id="userMenu" class="hidden items-center gap-2">
+          <div class="chip px-3 py-1 rounded-full text-sm" id="currentUserChip">Guest</div>
+          <button id="switchUserBtn" class="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition text-sm">
+            Switch profile
+          </button>
+          <button id="logoutBtn" class="px-3 py-1.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition text-sm">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Welcome / Demo Profile (no password fields) -->
+    <section id="viewWelcome" class="soft-card rounded-2xl p-6 sm:p-8">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-semibold text-[var(--deep)]">Welcome</h2>
+          <p class="text-gray-600 mt-2">
+            This is a fully simulated dashboard. Create or pick a demo profile to continue.
+          </p>
+          <div class="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-900 text-sm">
+            Note: Password-based login is not included.
+          </div>
+
+          <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Enter your display name</label>
+            <input id="welcomeName" type="text" placeholder="e.g., Amina"
+                   class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300">
+            <div class="flex items-center gap-3 mt-4">
+              <button id="enterDashboardBtn" class="px-4 py-2.5 rounded-xl btn-primary transition">
+                Continue to Dashboard
+              </button>
+              <button id="goToRegisterBtn"
+                      class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition">
+                Create Demo Profile
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Or select an existing profile</label>
+            <div class="flex gap-3">
+              <select id="existingUsers" class="flex-1 rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300"></select>
+              <button id="useSelectedBtn" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition">
+                Use
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="relative">
+          <div class="rounded-2xl bg-gradient-to-br from-[var(--blush)] via-[#f5f0ff] to-[#e7f7f3] p-6 border border-gray-100">
+            <svg viewBox="0 0 400 280" class="w-full h-auto">
+              <defs>
+                <linearGradient id="fill1" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#e9a1b4"/>
+                  <stop offset="100%" stop-color="#c7b8ea"/>
+                </linearGradient>
+              </defs>
+              <rect x="30" y="30" width="100" height="180" rx="18" fill="#ffffff" stroke="#eae7f5"/>
+              <rect x="150" y="30" width="100" height="180" rx="18" fill="#ffffff" stroke="#eae7f5"/>
+              <rect x="270" y="30" width="100" height="180" rx="18" fill="#ffffff" stroke="#eae7f5"/>
+              <rect x="30" y="120" width="100" height="90" fill="url(#fill1)" opacity="0.9"/>
+              <rect x="150" y="80" width="100" height="130" fill="url(#fill1)" opacity="0.9"/>
+              <rect x="270" y="150" width="100" height="60" fill="url(#fill1)" opacity="0.9"/>
+              <circle cx="80" cy="230" r="6" fill="#10b981"/>
+              <circle cx="200" cy="230" r="6" fill="#f59e0b"/>
+              <circle cx="320" cy="230" r="6" fill="#ef4444"/>
+              <text x="62" y="255" fill="#374151" font-size="12">Good</text>
+              <text x="181" y="255" fill="#374151" font-size="12">Warn</text>
+              <text x="301" y="255" fill="#374151" font-size="12">Critical</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Registration (Demo profile only) -->
+    <section id="viewRegister" class="soft-card rounded-2xl p-6 sm:p-8 mt-8 hidden">
+      <h2 class="text-xl sm:text-2xl font-semibold text-[var(--deep)]">Create a Demo Profile</h2>
+      <p class="text-gray-600 mt-2">This profile is stored locally in your browser for the demo experience.</p>
+      <div class="mt-6 grid sm:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Display name</label>
+          <input id="regName" type="text" placeholder="e.g., Sanaa"
+                 class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Password (not supported)</label>
+          <input disabled value="Not available in demo" class="w-full rounded-xl border-gray-200 bg-gray-50 text-gray-400">
+        </div>
+      </div>
+      <div class="mt-6 flex items-center gap-3">
+        <button id="createProfileBtn" class="px-4 py-2.5 rounded-xl bg-[var(--mint)] text-emerald-900 font-medium hover:opacity-90 transition">
+          Save Profile
+        </button>
+        <button id="backToWelcomeBtn" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition">
+          Back
+        </button>
+      </div>
+    </section>
+
+    <!-- Main App Shell -->
+    <section id="viewApp" class="hidden">
+      <!-- Top Navigation -->
+      <nav class="mt-2 mb-5">
+        <div class="flex flex-wrap gap-2">
+          <a href="#/dashboard" class="navlink link-tab px-4 py-2 rounded-xl bg-white/70 hover:bg-white transition text-sm">Dashboard</a>
+          <a href="#/analytics" class="navlink link-tab px-4 py-2 rounded-xl bg-white/70 hover:bg-white transition text-sm">Consumption Analytics</a>
+          <a href="#/devices" class="navlink link-tab px-4 py-2 rounded-xl bg-white/70 hover:bg-white transition text-sm">Device Management</a>
+          <a href="#/reports" class="navlink link-tab px-4 py-2 rounded-xl bg-white/70 hover:bg-white transition text-sm">Reports & Feedback</a>
+        </div>
+      </nav>
+
+      <!-- Pages -->
+      <!-- Dashboard Page -->
+      <section id="pageDashboard" class="hidden">
+        <!-- Recommendations & Rainfall -->
+        <section class="grid lg:grid-cols-3 gap-5 mb-6">
+          <div class="soft-card rounded-2xl p-5 lg:col-span-2">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-[var(--deep)]">Strategic Recommendations</h3>
+              <button id="refreshInsightsBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">
+                Refresh insights
+              </button>
+            </div>
+            <ul id="insightsList" class="mt-3 space-y-2 text-sm text-gray-700"></ul>
+          </div>
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-[var(--deep)]">Rainfall Prediction</h3>
+              <button id="refreshRainBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-indigo-50 hover:border-indigo-300 text-sm">
+                Update forecast
+              </button>
+            </div>
+            <div id="rainList" class="mt-3 space-y-2 text-sm"></div>
+          </div>
+        </section>
+
+        <!-- KPIs -->
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">Avg. Water Level</span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <div class="mt-3 text-3xl font-semibold text-[var(--deep)]" id="kpiAvgLevel">--%</div>
+            <div class="mt-1 text-sm text-gray-500">Across all active tanks</div>
+          </div>
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">Quality Status</span>
+              <svg viewBox="0 0 24 24" class="h-5 w-5 text-rose-400">
+                <path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 7L2 4v13l10 5 10-5V4L12 9Z"/>
+              </svg>
+            </div>
+            <div class="mt-3 text-3xl font-semibold text-[var(--deep)]" id="kpiQuality">—</div>
+            <div class="mt-1 text-sm text-gray-500">Weighted by capacity</div>
+          </div>
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">Leak Alerts</span>
+              <svg viewBox="0 0 24 24" class="h-5 w-5 text-indigo-400">
+                <path fill="currentColor" d="M12 2 1 21h22L12 2Zm1 15h-2v2h2v-2Zm0-6h-2v5h2v-5Z"/>
+              </svg>
+            </div>
+            <div class="mt-3 text-3xl font-semibold text-[var(--deep)]" id="kpiLeaks">0</div>
+            <div class="mt-1 text-sm text-gray-500">Active detections</div>
+          </div>
+        </div>
+
+        <!-- Tanks Grid -->
+        <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="tanksGrid"></div>
+      </section>
+
+      <!-- Analytics Page -->
+      <section id="pageAnalytics" class="hidden">
+        <div class="soft-card rounded-2xl p-5">
+          <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div>
+              <h3 class="font-semibold text-[var(--deep)]">Consumption Analytics</h3>
+              <p class="text-sm text-gray-600">Switch time views and explore patterns to spot issues early.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="anaTank" class="rounded-lg border-gray-200 focus:border-rose-300 focus:ring-rose-300 text-sm">
+                <option value="all">All tanks</option>
+              </select>
+              <div class="flex flex-wrap gap-2">
+                <button data-period="day" class="periodBtn px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Day ago</button>
+                <button data-period="week" class="periodBtn px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Week ago</button>
+                <button data-period="month" class="periodBtn px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Month ago</button>
+                <button data-period="year" class="periodBtn px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Year ago</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main consumption line -->
+          <div class="mt-5">
+            <h4 class="text-sm text-gray-600 mb-2">Consumption over selected period</h4>
+            <canvas id="chartConsumption" height="110"></canvas>
+          </div>
+
+          <!-- Peak Demand Analysis -->
+          <div class="grid md:grid-cols-2 gap-5 mt-6">
+            <div>
+              <h4 class="text-sm text-gray-600 mb-2">Peak hours of the day</h4>
+              <canvas id="chartPeakHours" height="110"></canvas>
+            </div>
+            <div>
+              <h4 class="text-sm text-gray-600 mb-2">Peak days of the week</h4>
+              <canvas id="chartPeakDays" height="110"></canvas>
+            </div>
+          </div>
+
+          <!-- Comparison -->
+          <div class="mt-6">
+            <h4 class="text-sm text-gray-600 mb-2">Current vs previous period</h4>
+            <canvas id="chartComparison" height="110"></canvas>
+          </div>
+
+          <!-- NRW -->
+          <div class="grid md:grid-cols-3 gap-5 mt-6">
+            <div class="md:col-span-2">
+              <h4 class="text-sm text-gray-600 mb-2">Non-Revenue Water (NRW) trend</h4>
+              <canvas id="chartNRW" height="110"></canvas>
+            </div>
+            <div class="soft-card rounded-2xl p-4">
+              <div class="text-gray-500">Estimated cost of NRW</div>
+              <div id="nrwCost" class="mt-2 text-3xl font-semibold text-[var(--deep)]">—</div>
+              <div class="text-xs text-gray-500 mt-1">Assumes R0.001 per liter (demo)</div>
+              <div id="nrwNote" class="mt-3 text-sm text-gray-600"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Devices Page -->
+      <section id="pageDevices" class="hidden">
+        <div class="grid lg:grid-cols-3 gap-5">
+          <!-- Devices List -->
+          <div class="soft-card rounded-2xl p-5 lg:col-span-2">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-[var(--deep)]">Registered Tanks & Devices</h3>
+              <button id="simulateDisconnectBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-indigo-50 hover:border-indigo-300 text-sm">
+                Toggle connection
+              </button>
+            </div>
+            <div id="devicesList" class="mt-4 space-y-3"></div>
+          </div>
+
+          <!-- Add New Device -->
+          <div class="soft-card rounded-2xl p-5">
+            <h3 class="font-semibold text-[var(--deep)]">Add New Device</h3>
+            <p class="text-sm text-gray-600">Register a tank and link a simulated device.</p>
+            <div class="mt-3 space-y-3">
+              <input id="newTankId" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300" placeholder="Tank ID (e.g., T-700)"/>
+              <input id="newTankName" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300" placeholder="Tank name"/>
+              <input id="newTankLocation" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300" placeholder="Location (e.g., West Ward)"/>
+              <input id="newTankCapacity" type="number" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300" placeholder="Capacity (L)"/>
+              <input id="newTankLevel" type="number" min="0" max="100" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300" placeholder="Initial level (%) e.g., 50"/>
+              <button id="addTankBtn" class="w-full px-4 py-2.5 rounded-xl btn-primary transition">Add Tank</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reports & Feedback Page (new) -->
+      <section id="pageReports" class="hidden">
+        <div class="grid lg:grid-cols-2 gap-5">
+          <!-- 1) Device & Maintenance Reports -->
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-[var(--deep)]">Device & Maintenance Reports</h3>
+              <div class="flex items-center gap-2">
+                <select id="pendingFilter" class="rounded-lg border-gray-200 text-sm">
+                  <option value="all">All</option>
+                  <option value="Leak">Leaks</option>
+                  <option value="Low Level">Low Level</option>
+                  <option value="Offline">Offline</option>
+                </select>
+                <button id="refreshOpsBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Refresh</button>
+              </div>
+            </div>
+
+            <!-- Pending Issues -->
+            <div class="mt-4">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm text-gray-600">Pending Issues</h4>
+              </div>
+              <div class="overflow-x-auto mt-2">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-gray-500 border-b">
+                      <th class="py-2 pr-3">Report ID</th>
+                      <th class="py-2 pr-3">Device ID</th>
+                      <th class="py-2 pr-3">Issue Type</th>
+                      <th class="py-2 pr-3">Time Detected</th>
+                      <th class="py-2 pr-3">Status</th>
+                      <th class="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pendingIssuesBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Maintenance History -->
+            <div class="mt-6">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm text-gray-600">Maintenance History</h4>
+                <button id="clearMaintenanceBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Clear</button>
+              </div>
+              <div class="overflow-x-auto mt-2">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-gray-500 border-b">
+                      <th class="py-2 pr-3">Report ID</th>
+                      <th class="py-2 pr-3">Device ID</th>
+                      <th class="py-2 pr-3">Issue Type</th>
+                      <th class="py-2 pr-3">Resolution Date</th>
+                      <th class="py-2 pr-3">Final Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="maintenanceBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- System Activity -->
+            <div class="mt-6">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm text-gray-600">System Activity</h4>
+                <button id="clearActivityBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Clear</button>
+              </div>
+              <div class="overflow-x-auto mt-2">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-gray-500 border-b">
+                      <th class="py-2 pr-3">Event</th>
+                      <th class="py-2 pr-3">Device ID</th>
+                      <th class="py-2 pr-3">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activityBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2) Public Feedback & User-Reported Issues -->
+          <div class="soft-card rounded-2xl p-5">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-[var(--deep)]">Public Feedback & User-Reported Issues</h3>
+              <button id="clearResolvedBtn" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">
+                Clear resolved
+              </button>
+            </div>
+
+            <!-- Quick Report (same as previous feature, kept for convenience) -->
+            <div class="mt-4 grid md:grid-cols-2 gap-3">
+              <select id="reportTank" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300">
+                <option value="">Tank (optional)</option>
+              </select>
+              <select id="reportType" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300">
+                <option>Leak</option>
+                <option>Low Pressure</option>
+                <option>No Water</option>
+                <option>Quality Issue</option>
+                <option>Other</option>
+              </select>
+              <input id="reportAddress" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300 md:col-span-2" placeholder="Address or area"/>
+              <textarea id="reportDesc" rows="3" class="w-full rounded-xl border-gray-200 focus:border-rose-300 focus:ring-rose-300 md:col-span-2" placeholder="Describe the issue..."></textarea>
+              <button id="submitReportBtn" class="w-full md:w-auto px-4 py-2.5 rounded-xl btn-primary transition">Submit Report</button>
+            </div>
+
+            <!-- User Reports Log -->
+            <div class="mt-6">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm text-gray-600">User Reports Log</h4>
+                <div class="flex items-center gap-2">
+                  <select id="userReportsSort" class="rounded-lg border-gray-200 text-sm">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                  </select>
+                </div>
+              </div>
+              <div class="overflow-x-auto mt-2">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-gray-500 border-b">
+                      <th class="py-2 pr-3">Report ID</th>
+                      <th class="py-2 pr-3">Issue Type</th>
+                      <th class="py-2 pr-3">Location</th>
+                      <th class="py-2 pr-3">Timestamp</th>
+                      <th class="py-2 pr-3">Description</th>
+                      <th class="py-2 pr-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reportsList"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Toasts -->
+    <div id="toastStack" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+  </div>
+
+  <script>
+    // ============================
+    // Demo Storage & State
+    // ============================
+    const STORAGE = {
+      USERS: 'swh_demo_users',
+      ACTIVE_USER: 'swh_active_user',
+      REPORTS: 'swh_reports',
+      MAINT: 'swh_maintenance',
+      ACTIVITY: 'swh_activity'
+    };
+
+    const appState = {
+      user: null,
+      connected: true,
+      forecast: [],
+      tanks: [
+        { id: 'T-101', name: 'North Reservoir', location: 'North Ward', capacity: 120000, level: 76, quality: 'Good', leak: false, valveOpen: false, lastUpdate: Date.now(), risk: 'Moderate Demand', opportunity: 'Stable Supply' },
+        { id: 'T-203', name: 'Central Hospital Tank', location: 'City Center', capacity: 80000, level: 58, quality: 'Warning', leak: false, valveOpen: false, lastUpdate: Date.now(), risk: 'High Demand Area', opportunity: 'Priority Allocation' },
+        { id: 'T-317', name: 'East Ward Tank', location: 'East Ward', capacity: 65000, level: 33, quality: 'Good', leak: false, valveOpen: true, lastUpdate: Date.now(), risk: 'Aging Pipes', opportunity: 'Low Leakage History' },
+        { id: 'T-420', name: 'West Hills Tank', location: 'West Hills', capacity: 95000, level: 89, quality: 'Good', leak: false, valveOpen: false, lastUpdate: Date.now(), risk: 'Landslip Zone', opportunity: 'Gravity-fed' },
+        { id: 'T-509', name: 'Riverside Storage', location: 'Riverside', capacity: 110000, level: 22, quality: 'Critical', leak: true, valveOpen: false, lastUpdate: Date.now(), risk: 'Flood-prone', opportunity: 'High Predicted Rainfall' },
+        { id: 'T-612', name: 'South Community Tank', location: 'South Ward', capacity: 70000, level: 44, quality: 'Warning', leak: false, valveOpen: false, lastUpdate: Date.now(), risk: 'Seasonal Demand', opportunity: 'Solar Pumps' },
+      ],
+      // Public reports (community)
+      reports: [],
+      // Maintenance history (resolved operational issues)
+      maintenance: [],
+      // System activity log
+      activity: []
+    };
+
+    // For analytics simulation
+    const analytics = {
+      basePerTank: {},
+      charts: {}
+    };
+
+    // Users
+    function loadUsers() { try { return JSON.parse(localStorage.getItem(STORAGE.USERS)) || []; } catch { return []; } }
+    function saveUsers(u) { localStorage.setItem(STORAGE.USERS, JSON.stringify(u)); }
+    function setActiveUser(name) {
+      appState.user = name;
+      localStorage.setItem(STORAGE.ACTIVE_USER, name);
+      updateUserUI();
+      if (name) {
+        showApp();
+        navigateTo(location.hash || '#/dashboard');
+        renderAll();
+        notify(`Hello, ${name}! You’re viewing live simulated data.`, 'success');
+      }
+    }
+    function initActiveUser() {
+      const stored = localStorage.getItem(STORAGE.ACTIVE_USER);
+      if (stored) { appState.user = stored; }
+      updateUserUI();
+    }
+
+    // Local persistence for reports, maintenance, activity
+    function loadPersisted() {
+      try { appState.reports = JSON.parse(localStorage.getItem(STORAGE.REPORTS)) || []; } catch { appState.reports = []; }
+      try { appState.maintenance = JSON.parse(localStorage.getItem(STORAGE.MAINT)) || []; } catch { appState.maintenance = []; }
+      try { appState.activity = JSON.parse(localStorage.getItem(STORAGE.ACTIVITY)) || []; } catch { appState.activity = []; }
+    }
+    function saveReports() { localStorage.setItem(STORAGE.REPORTS, JSON.stringify(appState.reports)); }
+    function saveMaintenance() { localStorage.setItem(STORAGE.MAINT, JSON.stringify(appState.maintenance)); }
+    function saveActivity() { localStorage.setItem(STORAGE.ACTIVITY, JSON.stringify(appState.activity)); }
+
+    // ============================
+    // UI Helpers
+    // ============================
+    function showView(id) {
+      ['viewWelcome','viewRegister','viewApp'].forEach(v => document.getElementById(v).classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      const menu = document.getElementById('userMenu');
+      if (id === 'viewApp') { menu.classList.remove('hidden'); menu.classList.add('flex'); }
+      else { menu.classList.add('hidden'); menu.classList.remove('flex'); }
+    }
+    function showApp() { showView('viewApp'); }
+    function updateUserUI() {
+      document.getElementById('currentUserChip').textContent = appState.user || 'Guest';
+    }
+    function notify(message, type = 'info') {
+      const colors = {
+        info: 'bg-white border-gray-200 text-gray-800',
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+        warn: 'bg-amber-50 border-amber-200 text-amber-900',
+        error: 'bg-rose-50 border-rose-200 text-rose-900'
+      };
+      const stack = document.getElementById('toastStack');
+      const el = document.createElement('div');
+      el.className = `toast soft-card rounded-xl px-4 py-3 border ${colors[type]} flex items-start gap-3`;
+      el.innerHTML = `
+        <div class="pt-0.5">
+          ${type === 'success' ? '<span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>' :
+            type === 'error' ? '<span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-500"></span>' :
+            type === 'warn' ? '<span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>' :
+                              '<span class="inline-block h-2.5 w-2.5 rounded-full bg-indigo-500"></span>'}
+        </div>
+        <div class="text-sm">${message}</div>
+        <button class="ml-auto text-gray-500 hover:text-gray-700">✕</button>
+      `;
+      el.querySelector('button').addEventListener('click', () => el.remove());
+      stack.appendChild(el);
+      setTimeout(() => el.remove(), 5200);
+    }
+    function setActiveNav(hash) {
+      document.querySelectorAll('a.navlink').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`a.navlink[href="${hash}"]`);
+      if (link) link.classList.add('active');
+    }
+    function navigateTo(hash) {
+      if (!hash || !['#/dashboard','#/analytics','#/devices','#/reports'].includes(hash)) {
+        hash = '#/dashboard';
+        history.replaceState(null, '', hash);
+      }
+      setActiveNav(hash);
+      ['pageDashboard','pageAnalytics','pageDevices','pageReports'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      if (hash === '#/dashboard') document.getElementById('pageDashboard').classList.remove('hidden');
+      if (hash === '#/analytics') { document.getElementById('pageAnalytics').classList.remove('hidden'); renderAnalyticsPage(); }
+      if (hash === '#/devices') { document.getElementById('pageDevices').classList.remove('hidden'); updateDevicesList(); }
+      if (hash === '#/reports') { document.getElementById('pageReports').classList.remove('hidden'); renderReportsPage(); }
+      renderKPIs();
+      renderTanksGrid();
+      updateInsights();
+    }
+    window.addEventListener('hashchange', () => navigateTo(location.hash));
+
+    // ============================
+    // Dashboard Rendering
+    // ============================
+    function qualityClass(q) {
+      if (q === 'Good') return 'pill pill-good';
+      if (q === 'Warning') return 'pill pill-warn';
+      return 'pill pill-crit';
+    }
+    function computeKPIs() {
+      const avg = Math.round(appState.tanks.reduce((s,t) => s + t.level, 0) / appState.tanks.length);
+      const weights = { Good: 3, Warning: 2, Critical: 1 };
+      const totalCap = appState.tanks.reduce((s,t) => s + t.capacity, 0);
+      const weighted = Math.round(appState.tanks.reduce((s,t) => s + (weights[t.quality] * (t.capacity / totalCap)), 0) * 100);
+      let qualityText = 'Mixed';
+      if (weighted >= 250) qualityText = 'Mostly Good';
+      else if (weighted >= 200) qualityText = 'Leaning Good';
+      else if (weighted >= 150) qualityText = 'Balanced';
+      else if (weighted >= 120) qualityText = 'Leaning Warning';
+      else qualityText = 'Mostly Critical';
+      const leaks = appState.tanks.filter(t => t.leak).length;
+      return { avg, qualityText, leaks };
+    }
+    function renderKPIs() {
+      const { avg, qualityText, leaks } = computeKPIs();
+      document.getElementById('kpiAvgLevel').textContent = `${avg}%`;
+      document.getElementById('kpiQuality').textContent = qualityText;
+      document.getElementById('kpiLeaks').textContent = leaks;
+    }
+    function formatNumber(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function timeAgo(ts) {
+      const secs = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+      if (secs < 60) return `${secs}s ago`;
+      const mins = Math.floor(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      return `${hrs}h ago`;
+    }
+    function findTank(id) { return appState.tanks.find(t => t.id === id); }
+
+    function renderTanksGrid() {
+      const grid = document.getElementById('tanksGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      appState.tanks.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'soft-card rounded-2xl p-5 flex flex-col gap-4';
+        const valveLabel = t.valveOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-700 border-gray-200';
+        const leakLabel = t.leak ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200';
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">${t.id}</span>
+                <span class="h-1.5 w-1.5 rounded-full ${t.leak ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
+              </div>
+              <h3 class="text-lg font-semibold text-[var(--deep)] mt-1">${t.name}</h3>
+              <div class="mt-1 text-xs text-gray-500">Location: ${t.location} • Capacity: ${formatNumber(t.capacity)} L</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="${qualityClass(t.quality)}">${t.quality}</span>
+            </div>
+          </div>
+
+          <div class="mt-1">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-600">Water Level</span>
+              <span class="font-semibold text-[var(--deep)]">${t.level}%</span>
+            </div>
+            <div class="progress-track h-3 rounded-full mt-2 overflow-hidden">
+              <div class="progress-fill h-3 rounded-full" style="width:${t.level}%"></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl border px-3 py-2.5 ${leakLabel}">
+              <div class="text-xs">Leak</div>
+              <div class="font-semibold">${t.leak ? 'Leak Detected!' : 'No Leak Detected'}</div>
+            </div>
+            <div class="rounded-xl border px-3 py-2.5 chip">
+              <div class="text-xs">Last Update</div>
+              <div class="font-semibold">${timeAgo(t.lastUpdate)}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-xl border px-3 py-2.5 bg-white">
+              <div class="text-xs text-gray-600">Risk</div>
+              <div class="font-semibold text-amber-700">${t.risk}</div>
+            </div>
+            <div class="rounded-xl border px-3 py-2.5 bg-white">
+              <div class="text-xs text-gray-600">Opportunity</div>
+              <div class="font-semibold text-emerald-700">${t.opportunity}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 mt-1">
+            <button data-action="toggle-valve" data-id="${t.id}" class="px-3 py-2 rounded-xl border ${valveLabel} hover:opacity-90 transition">
+              ${t.valveOpen ? 'Close Valve' : 'Open Valve'}
+            </button>
+            <button data-action="test-alert" data-id="${t.id}" class="px-3 py-2 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 text-indigo-700 transition">
+              Send Test Alert
+            </button>
+            <button data-action="flush" data-id="${t.id}" class="px-3 py-2 rounded-xl bg-white border border-rose-200 hover:bg-rose-50 text-rose-700 transition">
+              Quick Flush
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-gray-600 mt-1">
+            <span class="h-1.5 w-1.5 rounded-full ${appState.connected ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
+            <span>App ↔ Device: ${appState.connected ? 'Connected' : 'Offline'}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      grid.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (action === 'toggle-valve') return toggleValve(id);
+          if (action === 'test-alert') return sendTestAlert(id);
+          if (action === 'flush') return quickFlush(id);
+        });
+      });
+    }
+
+    // ============================
+    // Device Controls (Simulated)
+    // ============================
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function toggleValve(id) {
+      const t = findTank(id); if (!t) return;
+      t.valveOpen = !t.valveOpen;
+      t.lastUpdate = Date.now();
+      notify(`${t.name}: Valve ${t.valveOpen ? 'opened' : 'closed'}.`, 'success');
+      t.level = clamp(t.valveOpen ? t.level - 3 : t.level + 2, 0, 100);
+      if (t.valveOpen && t.leak && Math.random() < 0.35) {
+        t.leak = false;
+        notify(`${t.name}: Pressure relief cleared the leak warning.`, 'success');
+      }
+      renderAll();
+    }
+    function sendTestAlert(id) {
+      const t = findTank(id); if (!t) return;
+      notify(`Test alert sent to ${t.name}. Device acknowledged.`, 'info');
+      const prev = t.quality; t.quality = 'Warning'; t.lastUpdate = Date.now();
+      renderAll();
+      setTimeout(() => { t.quality = prev; t.lastUpdate = Date.now(); renderAll(); }, 1500);
+    }
+    function quickFlush(id) {
+      const t = findTank(id); if (!t) return;
+      const order = ['Critical','Warning','Good'];
+      const idx = order.indexOf(t.quality);
+      if (idx < order.length - 1) t.quality = order[idx + 1];
+      t.level = clamp(t.level - 5, 0, 100);
+      t.lastUpdate = Date.now();
+      notify(`${t.name}: Quick flush completed. Quality improved.`, 'success');
+      renderAll();
+    }
+
+    // ============================
+    // Simulated Live Telemetry
+    // ============================
+    setInterval(() => {
+      if (document.getElementById('viewApp').classList.contains('hidden')) return;
+      appState.tanks.forEach(t => {
+        const drift = (Math.random() * 2 - 1) * 1.2;
+        const valveEffect = t.valveOpen ? -Math.random() * 1.8 : Math.random() * 0.8;
+        t.level = clamp(Math.round(t.level + drift + valveEffect), 0, 100);
+        const roll = Math.random();
+        if (roll < 0.02) t.quality = 'Critical';
+        else if (roll < 0.08) t.quality = 'Warning';
+        else if (roll > 0.94) t.quality = 'Good';
+        const leakChance = (t.level > 85 ? 0.03 : 0.01) + (t.quality === 'Critical' ? 0.03 : t.quality === 'Warning' ? 0.015 : 0);
+        if (!t.leak && Math.random() < leakChance) t.leak = true;
+        if (t.leak && Math.random() < 0.02) t.leak = false;
+        t.lastUpdate = Date.now();
+      });
+      renderKPIs();
+      renderTanksGrid();
+      updateDevicesList();
+      updateInsights();
+      // Keep pending issues fresh if you're viewing reports
+      if (location.hash === '#/reports') renderPendingIssues();
+    }, 1500);
+
+    // ============================
+    // Rainfall Prediction (Simulated)
+    // ============================
+    function generateForecast(days = 5) {
+      const out = [];
+      for (let i = 0; i < days; i++) {
+        const date = new Date(); date.setDate(date.getDate() + i + 1);
+        const chance = Math.floor(Math.random() * 80) + 10;
+        const mm = Math.round(Math.random() * 20);
+        out.push({ date: date.toDateString().slice(0, 10), chance, mm });
+      }
+      appState.forecast = out;
+    }
+    function renderForecast() {
+      const c = document.getElementById('rainList');
+      if (!c) return;
+      c.innerHTML = '';
+      appState.forecast.forEach(d => {
+        const line = document.createElement('div');
+        const color = d.chance >= 60 ? 'text-emerald-700' : d.chance >= 30 ? 'text-amber-700' : 'text-gray-700';
+        line.className = `flex items-center justify-between rounded-lg border px-3 py-2 bg-white ${d.chance>=60?'border-emerald-200':d.chance>=30?'border-amber-200':'border-gray-200'}`;
+        line.innerHTML = `
+          <span class="font-medium">${d.date}</span>
+          <span class="${color}">${d.chance}% • ${d.mm}mm</span>
+        `;
+        c.appendChild(line);
+      });
+    }
+
+    // ============================
+    // Strategic Insights
+    // ============================
+    function updateInsights() {
+      const list = document.getElementById('insightsList');
+      if (!list) return;
+      list.innerHTML = '';
+      const wetDays = appState.forecast.filter(f => f.chance >= 60);
+      const dryDays = appState.forecast.filter(f => f.chance < 30);
+      const lowTanks = appState.tanks.filter(t => t.level < 35).slice(0, 2);
+      const highTanks = appState.tanks.filter(t => t.level > 80).slice(0, 2);
+      const leaks = appState.tanks.filter(t => t.leak);
+
+      const items = [];
+      if (wetDays.length) items.push(`High rainfall expected on ${wetDays[0].date}. Consider reducing pumping now to harvest rain.`);
+      if (dryDays.length >= 2) items.push(`Upcoming dry spell (${dryDays.length} days). Prioritize supply to hospitals and schools.`);
+      if (lowTanks.length) items.push(`Low level at ${lowTanks.map(t => t.name).join(' & ')}. Route extra supply temporarily.`);
+      if (highTanks.length) items.push(`High capacity at ${highTanks.map(t => t.name).join(' & ')}. You may open valves to balance.`);
+      if (leaks.length) items.push(`${leaks.length} active leak alert(s). Dispatch inspection for ${leaks.map(t => t.id).join(', ')}.`);
+      if (!items.length) items.push('System is stable. No urgent actions recommended.');
+
+      items.forEach(txt => {
+        const li = document.createElement('li');
+        li.className = 'flex items-start gap-2';
+        li.innerHTML = `<span class="mt-1 h-2 w-2 rounded-full bg-rose-400"></span><span>${txt}</span>`;
+        list.appendChild(li);
+      });
+    }
+
+    // ============================
+    // Analytics (Charts)
+    // ============================
+    function initAnalyticsBase() {
+      appState.tanks.forEach(t => {
+        analytics.basePerTank[t.id] = Math.max(200, Math.round(t.capacity / 150));
+      });
+    }
+    function buildSeries(period, tankIdOrAll = 'all') {
+      const colors = ['#c7b8ea','#e98bb9','#a7e0d3','#b0c8ff','#f6c1d6','#9fd0ff'];
+      const tanks = tankIdOrAll === 'all' ? appState.tanks : appState.tanks.filter(t => t.id === tankIdOrAll);
+      const datasets = [];
+      let labels = [];
+
+      if (period === 'day') {
+        labels = Array.from({length:24}, (_,i)=> `${i}:00`);
+        tanks.forEach((t, idx) => {
+          const base = analytics.basePerTank[t.id] || 300;
+          const data = labels.map((_,h)=> {
+            const peakFactor = (h>=6&&h<=9)||(h>=18&&h<=21) ? 1.4 : (h>=12&&h<=13?1.2:0.85);
+            const noise = 0.85 + Math.random()*0.3;
+            return Math.round(base * peakFactor * noise);
+          });
+          datasets.push({ label: t.name, data, color: colors[idx % colors.length] });
+        });
+      } else if (period === 'week') {
+        const now = new Date();
+        labels = Array.from({length:7}, (_,i)=> {
+          const d = new Date(now); d.setDate(now.getDate() - (6 - i));
+          return `${d.getMonth()+1}/${d.getDate()}`;
+        });
+        tanks.forEach((t, idx) => {
+          const base = (analytics.basePerTank[t.id] || 300) * 24;
+          const data = labels.map((_,d)=> {
+            const wFactor = [1,1.05,1.1,1.15,1.2,0.95,0.9][d];
+            const noise = 0.85 + Math.random()*0.3;
+            return Math.round(base * wFactor * noise);
+          });
+          datasets.push({ label: t.name, data, color: colors[idx % colors.length] });
+        });
+      } else if (period === 'month') {
+        labels = ['W-4','W-3','W-2','W-1'];
+        tanks.forEach((t, idx) => {
+          const base = (analytics.basePerTank[t.id] || 300) * 24 * 7;
+          const data = labels.map((_,w)=> {
+            const trend = 0.95 + w*0.02;
+            const noise = 0.9 + Math.random()*0.25;
+            return Math.round(base * trend * noise);
+          });
+          datasets.push({ label: t.name, data, color: colors[idx % colors.length] });
+        });
+      } else {
+        const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+        const now = new Date();
+        labels = Array.from({length:12}, (_,i)=> months[(now.getMonth()-11+i+12)%12]);
+        tanks.forEach((t, idx) => {
+          const base = (analytics.basePerTank[t.id] || 300) * 24 * 30;
+          const data = labels.map((_,m)=> {
+            const season = [1.0,1.02,1.05,1.1,1.14,1.18,1.22,1.15,1.08,1.02,0.98,0.96][m];
+            const noise = 0.9 + Math.random()*0.25;
+            return Math.round(base * season * noise);
+          });
+          datasets.push({ label: t.name, data, color: colors[idx % colors.length] });
+        });
+      }
+      return { labels, datasets };
+    }
+
+    function renderAnalyticsPage() {
+      const sel = document.getElementById('anaTank');
+      sel.innerHTML = '<option value="all">All tanks</option>';
+      appState.tanks.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = `${t.name} (${t.id})`;
+        sel.appendChild(opt);
+      });
+
+      document.querySelectorAll('.periodBtn').forEach(b => b.classList.remove('activeRange'));
+      document.querySelector('.periodBtn[data-period="week"]').classList.add('activeRange');
+
+      drawAnalytics('week', 'all');
+
+      document.querySelectorAll('.periodBtn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.periodBtn').forEach(b => b.classList.remove('activeRange'));
+          btn.classList.add('activeRange');
+          drawAnalytics(btn.dataset.period, sel.value || 'all');
+        };
+      });
+      sel.onchange = () => {
+        const active = document.querySelector('.periodBtn.activeRange')?.dataset.period || 'week';
+        drawAnalytics(active, sel.value || 'all');
+      };
+    }
+
+    function destroyCharts() {
+      ['chartConsumption','chartPeakHours','chartPeakDays','chartComparison','chartNRW'].forEach(id => {
+        if (analytics.charts[id]) { analytics.charts[id].destroy(); delete analytics.charts[id]; }
+      });
+    }
+    function drawAnalytics(period, tankIdOrAll) {
+      destroyCharts();
+      const { labels, datasets } = buildSeries(period, tankIdOrAll);
+
+      const ctx1 = document.getElementById('chartConsumption').getContext('2d');
+      analytics.charts.chartConsumption = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: datasets.map(d => ({
+            label: d.label, data: d.data, tension: 0.34,
+            borderColor: d.color, backgroundColor: d.color + '44', fill: true, pointRadius: 0
+          }))
+        },
+        options: {
+          responsive: true,
+          scales: { y: { title: { display: true, text: 'Liters' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+
+      // Peak hours (use a single tank for clarity)
+      const tankForPeaks = (tankIdOrAll === 'all' ? appState.tanks[0]?.id : tankIdOrAll) || (appState.tanks[0]?.id);
+      const seriesDay = buildSeries('day', tankForPeaks).datasets[0];
+
+      const ctx2 = document.getElementById('chartPeakHours').getContext('2d');
+      analytics.charts.chartPeakHours = new Chart(ctx2, {
+        type: 'line',
+        data: { labels: Array.from({length:24},(_,i)=>`${i}:00`), datasets: [{ label: 'Hourly consumption', data: seriesDay.data, borderColor: '#e98bb9', backgroundColor: '#e98bb955', fill: true, tension: 0.34, pointRadius: 0 }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { title: { display: true, text: 'Liters/hour' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+        }
+      });
+
+      const weekSeries = buildSeries('week', tankForPeaks).datasets[0];
+      const ctx3 = document.getElementById('chartPeakDays').getContext('2d');
+      analytics.charts.chartPeakDays = new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+          datasets: [{ label: 'Daily total', data: weekSeries.data, backgroundColor: '#a7e0d3', borderColor: '#0f766e' }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { title: { display: true, text: 'Liters/day' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+        }
+      });
+
+      // Comparison
+      const prev = buildSeries(period, tankIdOrAll);
+      const curTotals = datasets.map(d => d.data);
+      const prevTotals = prev.datasets.map(d => d.data);
+      const compLabels = labels;
+      const currentSum = (tankIdOrAll === 'all' ? sumArrays(curTotals) : curTotals[0]);
+      const previousSum = (tankIdOrAll === 'all' ? sumArrays(prevTotals) : prevTotals[0]);
+      const ctx4 = document.getElementById('chartComparison').getContext('2d');
+      analytics.charts.chartComparison = new Chart(ctx4, {
+        type: 'line',
+        data: {
+          labels: compLabels,
+          datasets: [
+            { label: 'Current', data: currentSum, borderColor: '#c7b8ea', backgroundColor: '#c7b8ea55', fill: true, tension: 0.34, pointRadius: 0 },
+            { label: 'Previous', data: previousSum, borderColor: '#b0c8ff', backgroundColor: '#b0c8ff55', fill: true, tension: 0.34, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { title: { display: true, text: 'Liters' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+        }
+      });
+
+      // NRW
+      const nrwPercents = compLabels.map(()=> Math.round(8 + Math.random()*10));
+      const nrwVolumes = currentSum.map((v,i)=> Math.round(v * (nrwPercents[i]/100)));
+      const ctx5 = document.getElementById('chartNRW').getContext('2d');
+      analytics.charts.chartNRW = new Chart(ctx5, {
+        type: 'bar',
+        data: {
+          labels: compLabels,
+          datasets: [
+            { type: 'line', label: 'NRW %', yAxisID: 'y1', data: nrwPercents, borderColor: '#ef4444', backgroundColor: '#ef444455', fill: false, tension: 0.3, pointRadius: 0 },
+            { type: 'bar', label: 'NRW volume (L)', yAxisID: 'y', data: nrwVolumes, backgroundColor: '#f6c1d6', borderColor: '#e98bb9' }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: { position: 'left', title: { display: true, text: 'Liters' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y1: { position: 'right', title: { display: true, text: '%' }, grid: { drawOnChartArea: false }, min: 0, max: 30 }
+          }
+        }
+      });
+      const totalNRW = nrwVolumes.reduce((s,v)=>s+v,0);
+      const cost = totalNRW * 0.001;
+      document.getElementById('nrwCost').textContent = `R${cost.toFixed(2)}`;
+      document.getElementById('nrwNote').textContent = `Across ${compLabels.length} point(s): ~${formatNumber(totalNRW)} L lost.`;
+    }
+    function sumArrays(arrs) { if (!arrs.length) return []; return arrs[0].map((_,i)=> arrs.reduce((s,a)=> s + a[i], 0)); }
+
+    // ============================
+    // Devices Management
+    // ============================
+    function updateDevicesList() {
+      const box = document.getElementById('devicesList');
+      if (!box) return;
+      box.innerHTML = '';
+      appState.tanks.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'flex flex-col sm:flex-row sm:items-center gap-3 justify-between rounded-xl border bg-white px-3 py-3';
+        row.innerHTML = `
+          <div>
+            <div class="font-medium text-[var(--deep)]">${t.name} <span class="text-xs text-gray-500">(${t.id})</span></div>
+            <div class="text-xs text-gray-500">Location: ${t.location} • Capacity: ${formatNumber(t.capacity)} L • Level: ${t.level}%</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full ${appState.connected ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
+            <span class="text-sm">${appState.connected ? 'Connected' : 'Offline'}</span>
+            <button data-did="${t.id}" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm">Rename</button>
+            <button data-remove="${t.id}" title="Delete" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-rose-50 hover:border-rose-300 text-sm text-rose-600">Delete</button>
+          </div>
+        `;
+        box.appendChild(row);
+      });
+      box.querySelectorAll('button[data-did]').forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-did');
+          const t = findTank(id);
+          const name = prompt('New display name for tank:', t.name);
+          if (name && name.trim()) { t.name = name.trim(); notify('Tank renamed.', 'success'); renderAll(); }
+        });
+      });
+      box.querySelectorAll('button[data-remove]').forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-remove');
+          const t = findTank(id);
+          if (confirm(`Delete ${t.name}? This cannot be undone (demo).`)) {
+            appState.tanks = appState.tanks.filter(x => x.id !== id);
+            logActivity('Device Deleted', id);
+            renderAll();
+            notify('Device deleted.', 'info');
+          }
+        });
+      });
+    }
+
+    // ============================
+    // Reports & Feedback (Ops + Public)
+    // ============================
+    function renderReportsPage() {
+      populateReportTankOptions();
+      renderPendingIssues();
+      renderMaintenanceHistory();
+      renderActivityLog();
+      renderUserReportsList();
+    }
+
+    // Build pending issues from live tank state
+    function gatherPendingIssues() {
+      const issues = [];
+      const now = Date.now();
+      appState.tanks.forEach(t => {
+        if (t.leak) issues.push({ id: 'I-' + t.id + '-LEAK', device: t.id, type: 'Leak', ts: t.lastUpdate || now, status: 'New' });
+        if (t.level < 25) issues.push({ id: 'I-' + t.id + '-LOW', device: t.id, type: 'Low Level', ts: t.lastUpdate || now, status: 'New' });
+        if (!appState.connected) issues.push({ id: 'I-' + t.id + '-OFF', device: t.id, type: 'Offline', ts: now, status: 'New' });
+      });
+      return issues;
+    }
+
+    function renderPendingIssues() {
+      const tbody = document.getElementById('pendingIssuesBody');
+      if (!tbody) return;
+      const filter = document.getElementById('pendingFilter')?.value || 'all';
+      const issues = gatherPendingIssues().filter(i => filter === 'all' ? true : i.type === filter);
+      tbody.innerHTML = '';
+      if (!issues.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-3 text-gray-500">No pending issues 🎉</td></tr>`;
+        return;
+      }
+      issues.forEach(i => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-0';
+        tr.innerHTML = `
+          <td class="py-2 pr-3 font-medium">${i.id}</td>
+          <td class="py-2 pr-3">${i.device}</td>
+          <td class="py-2 pr-3">${i.type}</td>
+          <td class="py-2 pr-3">${new Date(i.ts).toLocaleString()}</td>
+          <td class="py-2 pr-3"><span class="pill pill-warn">${i.status}</span></td>
+          <td class="py-2 pr-3">
+            <button data-resolve="${i.id}" data-device="${i.device}" data-type="${i.type}" class="px-2 py-1 rounded-lg border bg-white hover:bg-emerald-50 hover:border-emerald-300 text-xs text-emerald-700">Mark Resolved</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('button[data-resolve]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-resolve');
+          const device = btn.getAttribute('data-device');
+          const type = btn.getAttribute('data-type');
+          const notes = prompt('Add final notes for maintenance record:', type === 'Leak' ? 'Pipe inspected and sealed' : 'Checked and normalized');
+          appState.maintenance.push({ id, device, type, when: Date.now(), notes: notes || 'Resolved' });
+          saveMaintenance();
+          notify(`${id} marked resolved and stored in history.`, 'success');
+          renderPendingIssues();
+          renderMaintenanceHistory();
+        });
+      });
+    }
+
+    function renderMaintenanceHistory() {
+      const tbody = document.getElementById('maintenanceBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!appState.maintenance.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-3 text-gray-500">No maintenance records yet.</td></tr>`;
+        return;
+      }
+      appState.maintenance.slice().reverse().forEach(m => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-0';
+        tr.innerHTML = `
+          <td class="py-2 pr-3 font-medium">${m.id}</td>
+          <td class="py-2 pr-3">${m.device}</td>
+          <td class="py-2 pr-3">${m.type}</td>
+          <td class="py-2 pr-3">${new Date(m.when).toLocaleString()}</td>
+          <td class="py-2 pr-3">${m.notes || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function logActivity(event, deviceId) {
+      appState.activity.push({ event, device: deviceId || '-', ts: Date.now() });
+      saveActivity();
+      if (location.hash === '#/reports') renderActivityLog();
+    }
+    function renderActivityLog() {
+      const tbody = document.getElementById('activityBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!appState.activity.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="py-3 text-gray-500">No recent activity.</td></tr>`;
+        return;
+      }
+      appState.activity.slice().reverse().forEach(a => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-0';
+        tr.innerHTML = `
+          <td class="py-2 pr-3">${a.event}</td>
+          <td class="py-2 pr-3">${a.device}</td>
+          <td class="py-2 pr-3">${new Date(a.ts).toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Public user reports: list + status workflow
+    function populateReportTankOptions() {
+      const sel = document.getElementById('reportTank');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Tank (optional)</option>';
+      appState.tanks.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = `${t.name} (${t.id})`;
+        sel.appendChild(opt);
+      });
+    }
+    function renderUserReportsList() {
+      const box = document.getElementById('reportsList');
+      if (!box) return;
+      const sortMode = document.getElementById('userReportsSort')?.value || 'newest';
+      const list = appState.reports.slice().sort((a,b) => sortMode==='newest' ? b.ts - a.ts : a.ts - b.ts);
+      box.innerHTML = '';
+      if (!list.length) {
+        box.innerHTML = '<tr><td colspan="6" class="py-3 text-gray-500">No public reports yet.</td></tr>';
+        return;
+      }
+      list.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-0 align-top';
+        tr.innerHTML = `
+          <td class="py-2 pr-3 font-medium">${r.id}</td>
+          <td class="py-2 pr-3">${r.type}</td>
+          <td class="py-2 pr-3">${r.tankId || r.address || '-'}</td>
+          <td class="py-2 pr-3">${new Date(r.ts).toLocaleString()}</td>
+          <td class="py-2 pr-3 max-w-[280px]">${r.desc || ''}</td>
+          <td class="py-2 pr-3">
+            <select data-rid="${r.id}" class="rounded-lg border-gray-200 text-sm">
+              <option ${r.status==='New'?'selected':''}>New</option>
+              <option ${r.status==='Acknowledged'?'selected':''}>Acknowledged</option>
+              <option ${r.status==='In Progress'?'selected':''}>In Progress</option>
+              <option ${r.status==='Resolved'?'selected':''}>Resolved</option>
+            </select>
+          </td>
+        `;
+        box.appendChild(tr);
+      });
+      box.querySelectorAll('select[data-rid]').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const id = sel.getAttribute('data-rid');
+          const r = appState.reports.find(x => x.id === id);
+          if (r) { r.status = sel.value; saveReports(); notify('Report status updated.', 'success'); }
+        });
+      });
+    }
+
+    // ============================
+    // Render Orchestration
+    // ============================
+    function renderAll() {
+      renderKPIs();
+      renderTanksGrid();
+      updateDevicesList();
+      populateReportTankOptions();
+      renderForecast();
+      updateInsights();
+      if (location.hash === '#/analytics') renderAnalyticsPage();
+      if (location.hash === '#/reports') renderReportsPage();
+    }
+
+    // ============================
+    // Events & Onboarding
+    // ============================
+    function populateExistingUsers() {
+      const select = document.getElementById('existingUsers');
+      const users = loadUsers();
+      select.innerHTML = '';
+      if (!users.length) {
+        const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'No saved profiles'; select.appendChild(opt);
+      } else {
+        users.forEach(u => { const opt = document.createElement('option'); opt.value = u; opt.textContent = u; select.appendChild(opt); });
+      }
+    }
+    function initEvents() {
+      // Welcome
+      document.getElementById('enterDashboardBtn').addEventListener('click', () => {
+        const name = (document.getElementById('welcomeName').value || '').trim();
+        if (!name) return notify('Please enter a display name to continue.', 'warn');
+        const users = loadUsers(); if (!users.includes(name)) { users.push(name); saveUsers(users); }
+        setActiveUser(name); populateExistingUsers();
+      });
+      document.getElementById('goToRegisterBtn').addEventListener('click', () => showView('viewRegister'));
+      document.getElementById('useSelectedBtn').addEventListener('click', () => {
+        const sel = document.getElementById('existingUsers');
+        if (!sel.value) return notify('No profile available. Create one first.', 'warn');
+        setActiveUser(sel.value);
+      });
+
+      // Register
+      document.getElementById('createProfileBtn').addEventListener('click', () => {
+        const name = (document.getElementById('regName').value || '').trim();
+        if (!name) return notify('Please enter a display name for your demo profile.', 'warn');
+        const users = loadUsers();
+        if (users.includes(name)) return notify('That profile already exists. Pick another name or use it from the list.', 'error');
+        users.push(name); saveUsers(users); populateExistingUsers(); notify('Demo profile saved. You can now continue.', 'success'); setActiveUser(name);
+      });
+      document.getElementById('backToWelcomeBtn').addEventListener('click', () => showView('viewWelcome'));
+
+      // Header
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem(STORAGE.ACTIVE_USER);
+        appState.user = null; updateUserUI(); showView('viewWelcome'); notify('You have signed out of the demo.', 'info');
+      });
+      document.getElementById('switchUserBtn').addEventListener('click', () => { showView('viewWelcome'); populateExistingUsers(); });
+
+      // Devices
+      document.getElementById('addTankBtn').addEventListener('click', () => {
+        const id = document.getElementById('newTankId').value.trim();
+        const name = document.getElementById('newTankName').value.trim();
+        const loc = document.getElementById('newTankLocation').value.trim();
+        const cap = parseInt(document.getElementById('newTankCapacity').value, 10);
+        const lvl = clamp(parseInt(document.getElementById('newTankLevel').value, 10), 0, 100);
+        if (!id || !name || !cap || !loc || isNaN(lvl)) return notify('Please complete all fields to add a tank.', 'warn');
+        if (findTank(id)) return notify('A tank with that ID already exists.', 'error');
+        const quality = ['Good','Warning','Critical'][Math.floor(Math.random()*3)];
+        const t = { id, name, location: loc, capacity: cap, level: lvl, quality, leak: false, valveOpen: false, lastUpdate: Date.now(), risk: 'New Asset', opportunity: 'Baseline' };
+        appState.tanks.push(t);
+        analytics.basePerTank[id] = Math.max(200, Math.round(cap / 150));
+        logActivity('Tank Added', id);
+        ['newTankId','newTankName','newTankLocation','newTankCapacity','newTankLevel'].forEach(i => document.getElementById(i).value = '');
+        notify('Tank added and device linked (simulated).', 'success');
+        renderAll();
+      });
+      document.getElementById('simulateDisconnectBtn').addEventListener('click', () => {
+        appState.connected = !appState.connected; notify(`Devices are now ${appState.connected ? 'connected' : 'offline'}.`, 'info'); renderAll();
+        logActivity(appState.connected ? 'System Connected' : 'System Disconnected', '-');
+      });
+
+      // Reports (Public)
+      document.getElementById('submitReportBtn').addEventListener('click', () => {
+        const tankId = document.getElementById('reportTank').value || null;
+        const address = document.getElementById('reportAddress').value.trim();
+        const type = document.getElementById('reportType').value;
+        const desc = document.getElementById('reportDesc').value.trim();
+        if (!tankId && !address) return notify('Please select a tank or enter an address.', 'warn');
+        const id = 'R-' + Math.random().toString(36).slice(2,8).toUpperCase();
+        const report = { id, tankId, address, type, desc, status: 'New', ts: Date.now() };
+        appState.reports.push(report); saveReports();
+        document.getElementById('reportAddress').value = ''; document.getElementById('reportDesc').value = ''; document.getElementById('reportTank').value = '';
+        notify('Report submitted. Thank you!', 'success'); renderUserReportsList();
+      });
+      document.getElementById('clearResolvedBtn').addEventListener('click', () => {
+        const before = appState.reports.length;
+        appState.reports = appState.reports.filter(r => r.status !== 'Resolved');
+        saveReports(); renderUserReportsList();
+        notify(`${before - appState.reports.length} resolved report(s) cleared.`, 'info');
+      });
+      document.getElementById('userReportsSort').addEventListener('change', renderUserReportsList);
+
+      // Ops panel events
+      document.getElementById('pendingFilter').addEventListener('change', renderPendingIssues);
+      document.getElementById('refreshOpsBtn').addEventListener('click', () => { renderPendingIssues(); notify('Pending issues refreshed.', 'success'); });
+      document.getElementById('clearMaintenanceBtn').addEventListener('click', () => {
+        if (!appState.maintenance.length) return;
+        if (confirm('Clear all maintenance history?')) {
+          appState.maintenance = []; saveMaintenance(); renderMaintenanceHistory(); notify('Maintenance history cleared.', 'info');
+        }
+      });
+      document.getElementById('clearActivityBtn').addEventListener('click', () => {
+        if (!appState.activity.length) return;
+        if (confirm('Clear system activity log?')) {
+          appState.activity = []; saveActivity(); renderActivityLog(); notify('Activity log cleared.', 'info');
+        }
+      });
+    }
+
+    // ============================
+    // Init
+    // ============================
+    (function init() {
+      initActiveUser();
+      populateExistingUsers();
+      initEvents();
+      loadPersisted();
+      generateForecast();
+      renderForecast();
+      initAnalyticsBase();
+      if (appState.user) {
+        showApp();
+        navigateTo(location.hash || '#/dashboard');
+        renderAll();
+        notify(`Welcome back, ${appState.user}.`, 'success');
+      } else {
+        showView('viewWelcome');
+      }
+    })();
+
+    // ============================
+    // Notes:
+    // - Reports & Feedback now has two clear sections (Ops + Public).
+    // - Pending issues are derived live from tank states; you can resolve them into maintenance history.
+    // - System activity records tank add/delete and connection toggles.
+    // - Public reports support New → Acknowledged → In Progress → Resolved status workflow.
+    // ============================
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96ffe50a9393af5d',t:'MTc1NTMzNjQzNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+
